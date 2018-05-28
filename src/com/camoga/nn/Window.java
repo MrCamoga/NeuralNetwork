@@ -53,7 +53,7 @@ public class Window extends JFrame implements ActionListener {
 //			int xspacing = 100;
 //			int xo = 30;
 //			int maxneurons = 12;
-//			
+//			 
 //			int[] yoa = new int[Main.nn.a.length];
 //			for(int n = 0; n < yoa.length; n++) {
 //				yoa[n] = Main.nn.a[n].length > maxneurons ? (height-maxneurons*(diameter+yspacing))/2:(height-Main.nn.a[n].length*(diameter+yspacing))/2;

@@ -42,7 +42,7 @@ public class NeuralNetwork implements Cloneable{
 		this.f = new ActivationFunctions[id.length];
 		for(int i = 0; i < id.length; i++) {
 			for(ActivationFunctions f : ActivationFunctions.values()) {
-				if(f.getId()==id[i]) {
+				if(f.getId() == id[i]) {
 					this.f[i] = f;
 					break;
 				}

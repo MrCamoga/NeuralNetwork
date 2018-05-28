@@ -1,7 +1,6 @@
 package com.camoga.nn;
 
 /**
- * 
  *	SIGMOID(0) <br>
  *	TANH(1)
  */

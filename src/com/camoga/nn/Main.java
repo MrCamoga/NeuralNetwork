@@ -84,7 +84,7 @@ public class Main {
 				target = new double[10];
 				
 				for(int j = 0; j < pixels.length; j++) {
-					pixels[j] = testImages.read()/255.0D;
+					pixels[j] = testImages.read() / 255.0D;
 				}
 				int number = testLabels.read();
 				target[number] = 1;
