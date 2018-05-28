@@ -1,8 +1,8 @@
 package com.camoga.nn;
 
 /**
- *	SIGMOID(0) <br>
- *	TANH(1)
+ * SIGMOID(0)
+ * TANH(1)
  */
 public enum ActivationFunctions {
 	SIGMOID(0), TANH(1);

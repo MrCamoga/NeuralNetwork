@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public class Main {
 	
-	private final int batchsize = 600;
+	private final int batchsize = 60000;
 	public static NeuralNetwork nn;
 	public Window window;
 	
@@ -27,8 +27,8 @@ public class Main {
 	
 	public void initNN(String path) {
 		if(path == null) {
-			nn = new NeuralNetwork(new int[] {784, 50,50, 10}, new int[3]);
-			//nn.setActivations(new int[3]);
+			nn = new NeuralNetwork(784, 50,50, 10);
+			nn.setActivations(new int[3]);
 		}
 		else try {
 			nn = new NeuralNetwork(new BufferedInputStream(getClass().getResourceAsStream(path)));
@@ -84,7 +84,7 @@ public class Main {
 				target = new double[10];
 				
 				for(int j = 0; j < pixels.length; j++) {
-					pixels[j] = testImages.read() / 255.0D;
+					pixels[j] = testImages.read()/255.0D;
 				}
 				int number = testLabels.read();
 				target[number] = 1;

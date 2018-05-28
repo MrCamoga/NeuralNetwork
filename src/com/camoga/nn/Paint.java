@@ -41,8 +41,8 @@ public class Paint implements MouseMotionListener, MouseListener {
 	}
 	
 	public void tick() {
-		int x = (int) ((mousePos.x - xo)/(double)scale);
-		int y = (int) ((mousePos.y - yo)/(double)scale);
+		int x = (int) ((mousePos.x-xo)/(double)scale);
+		int y = (int) ((mousePos.y-yo)/(double)scale);
 		int brushsize = 3;
 		if(x > 56) {
 			Arrays.setAll(pixels, j -> 0);
@@ -51,7 +51,7 @@ public class Paint implements MouseMotionListener, MouseListener {
 		if(mousePressed) {
 			for(int iy = 0; iy < brushsize; iy++) {
 				for(int ix = 0; ix < brushsize; ix++) {
-					if((int)(ix*ix + iy*iy) > brushsize*brushsize) continue;
+					if((int)(ix*ix+iy*iy) > brushsize*brushsize) continue;
 					int i = x+ix + (y+iy) * image.getWidth();	
 					if(0 <= i && i < pixels.length)
 					pixels[i] = 0xffffff;

@@ -47,57 +47,7 @@ public class Window extends JFrame implements ActionListener {
 		@Override
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);
-			if(Main.nn == null) return;
-//			int diameter = 20;
-//			int yspacing = 10;
-//			int xspacing = 100;
-//			int xo = 30;
-//			int maxneurons = 12;
-//			 
-//			int[] yoa = new int[Main.nn.a.length];
-//			for(int n = 0; n < yoa.length; n++) {
-//				yoa[n] = Main.nn.a[n].length > maxneurons ? (height-maxneurons*(diameter+yspacing))/2:(height-Main.nn.a[n].length*(diameter+yspacing))/2;
-//			}
-//			
-//			g.setFont(new Font("Arial", Font.BOLD, 9));
-//			g.setColor(new Color(0xb0, 0xc0, 0x20));
-//			g.fillRect(0, 0, width, height);
-//			
-//			//Weights
-//			for(int n = 0; n < Main.nn.w.length; n++) {
-//				for(int i = 0; i < Math.min(maxneurons,Main.nn.w[n][0].length); i++) {
-//					for(int j = 0; j < Math.min(maxneurons,Main.nn.w[n].length); j++) {
-//						double w = Main.nn.w[n][j][i];
-//						g.setColor(w>0 ? new Color(0, 0, 0xff, (int) Math.min(0xff,0xff*w)):new Color(0xff, 0, 0, (int) (Math.min(0xff,0xff*-w))));
-//						g.drawLine(xspacing*n+xo+diameter/2, yoa[n]+i*(diameter+yspacing)+diameter/2, xo+xspacing*(n+1)+diameter/2, yoa[n+1]+j*(yspacing+diameter)+diameter/2);
-//					}
-//				}
-//			}
-//			//Biases
-//			for(int n = 0; n < Main.nn.b.length; n++) {
-//				for(int i = 0; i < Math.min(maxneurons,Main.nn.b[n].length); i++) {
-//					double wb = Main.nn.b[n][i];
-//					g.setColor(wb>0 ? new Color(0, 0xff, 0, (int) Math.min(0xff,0xff*wb)):new Color(0xff, 0x70, 0, (int) (Math.min(0xff,0xff*-wb))));
-//					g.drawLine(xspacing*n+xo+diameter/2, height-yoa[n]+diameter/2, xspacing*(n+1)+xo+diameter/2, yoa[n+1]+i*(diameter+yspacing)+diameter/2);
-//				}				
-//			}
-//			//Neurons
-//			for(int n = 0; n < Main.nn.a.length; n++) {
-//				for(int i = 0; i < Math.min(maxneurons,Main.nn.a[n].length); i++) {
-//					double a = Main.nn.a[n][i];
-//					int col = (int) Math.abs(Math.min(0xff,0xff*a));
-//					g.setColor(new Color(col,col,col));
-//					int y = yoa[n]+i*(diameter+yspacing);
-//					g.fillOval(xspacing*n+xo, y, diameter, diameter);
-//					g.setColor(a>0.8 ? Color.black:Color.white);
-//					g.drawString(new DecimalFormat("#.##").format(a)+"", xspacing*n+xo+diameter/4-3, y+diameter/4*3);
-//				}
-//			}
-//			for(int n = 0; n < Main.nn.b.length; n++) {
-//				g.setColor(Color.white);
-//				g.fillOval(xspacing*n+xo, height-yoa[n], diameter, diameter);
-//			}
-			Main.nn.render(g, 30, 30, height, width);
+			Main.nn.render(g, 50, 50, width-100, height-100);
 			
 			int[] pixels = new int[28*28];
 			for(int i = 0; i < pixels.length; i++) {
@@ -105,12 +55,12 @@ public class Window extends JFrame implements ActionListener {
 			}
 			BufferedImage image = new BufferedImage(28, 28, BufferedImage.TYPE_INT_RGB);
 			image.setRGB(0, 0, 28, 28, pixels, 0, 28);
-			g.drawImage(image, 100*Main.nn.a.length, 150, null);
+			g.drawImage(image, 120*Main.nn.a.length, 150, null);
 			
-			g.drawString((double)Main.nn.correct/(double)Main.nn.total*100+"% correct", 100*Main.nn.a.length, 200);
+			g.drawString((double)Main.nn.correct/(double)Main.nn.total*100+"% correct", 120*Main.nn.a.length, 200);
 			if(Main.testing) {
 				g.setColor(Color.red);
-				g.drawString("Testing...", 100*Main.nn.a.length, 250);				
+				g.drawString("Testing...", 120*Main.nn.a.length, 250);				
 			}
 			if(paint != null)paint.draw(g);
 			
@@ -186,8 +136,8 @@ public class Window extends JFrame implements ActionListener {
 			panel.add(lambda);
 			int result = JOptionPane.showConfirmDialog(this, panel, "Create new NN", JOptionPane.OK_CANCEL_OPTION);
 			if(result == JOptionPane.OK_OPTION) {
-				//TODO activations
-				Main.nn = new NeuralNetwork(new int[] {Integer.parseInt(i.getText()), Integer.parseInt(h.getText()), Integer.parseInt(h1.getText()), Integer.parseInt(o.getText())}, new int[3]);
+				//TODO create NN
+				Main.nn = new NeuralNetwork(Integer.parseInt(i.getText()), Integer.parseInt(h.getText()), Integer.parseInt(h1.getText()), Integer.parseInt(o.getText()));
 			}
 			break;
 		case "Open":

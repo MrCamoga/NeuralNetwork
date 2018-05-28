@@ -10,7 +10,7 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Random;
 
-public class NeuralNetwork implements Cloneable{
+public class NeuralNetwork implements Cloneable {
 
 	public double[][] a;
 
@@ -26,23 +26,18 @@ public class NeuralNetwork implements Cloneable{
 	/**
 	 * After calling this constructor you should set the activation functions with setActivations();
 	 * @param layerSizes
-	 * @param activations {@link ActivationFunctions}
 	 */
-	public NeuralNetwork(int[] layerSizes, int[] activations) {
+	public NeuralNetwork(int...layerSizes) {
 		initNetwork(layerSizes);
 		randomInit();
-		setActivations(activations);
 	}
 	
-	/**
-	 * @param id look {@link ActivationFunctions}
-	 */
 	public void setActivations(int...id) {
 		if(id.length != w.length) throw new RuntimeException("Length of activation functions is incorrect");
 		this.f = new ActivationFunctions[id.length];
 		for(int i = 0; i < id.length; i++) {
 			for(ActivationFunctions f : ActivationFunctions.values()) {
-				if(f.getId() == id[i]) {
+				if(f.getId()==id[i]) {
 					this.f[i] = f;
 					break;
 				}
@@ -109,7 +104,7 @@ public class NeuralNetwork implements Cloneable{
 		for(int j = 0; j < b.length; j++) {
 			b[j] = new double[l[j+1]];
 		}
-		Arrays.stream(l).forEach(i -> System.out.print(i+"×"));
+//		Arrays.stream(l).forEach(i -> System.out.print(i+"×"));
 	}
 
 	public void train(double[] input, double[] target) {
@@ -193,7 +188,7 @@ public class NeuralNetwork implements Cloneable{
 	}
 	
 	/**
-	 * @return neural network output
+	 * returns neural network output
 	 */
 	public double[] feed(double[] input) {
 		double[][] z = new double[a.length-1][];
@@ -264,7 +259,6 @@ public class NeuralNetwork implements Cloneable{
 		return result;
 	}
 
-	//TODO 
 	public double[] matrixVecMult(double[] a, double[][] w) {
 		double[] result = new double[w.length];
 		for (int i = 0; i < result.length; i++) {
@@ -336,14 +330,15 @@ public class NeuralNetwork implements Cloneable{
 		return result;
 	}
 	
-	public void mutate(double mutationrate, double mutation) {
-		for(double[][] i : w) {
-			for(double[] j : i) {
-				for(double k : j) {
-					if(Math.random() < mutationrate) k += k*mutation;
+	public NeuralNetwork mutate(double mutationrate, double mutation) {
+		for(int i = 0; i < w.length; i++) {
+			for(int j = 0; j < w[i].length; j++) {
+				for(int k = 0; k < w[i][j].length; k++) {
+					if(Math.random() < mutationrate) w[i][j][k] += (Math.random()-0.5)*1.5*mutation;
 				}
 			}
 		}
+		return this;
 	}
 
 	public double[] activation(double[] layer, ActivationFunctions f) {
@@ -364,12 +359,6 @@ public class NeuralNetwork implements Cloneable{
 		return output;
 	}
 
-	/**
-	 * 
-	 * @param layer
-	 * @param f
-	 * @return f'(z)
-	 */
 	public double[] activationPrime(double[] layer, ActivationFunctions f) {
 		double[] result = null;
 		double[] s = activation(layer, f);
@@ -384,9 +373,6 @@ public class NeuralNetwork implements Cloneable{
 		return result;
 	}
 	
-	/**
-	 * 
-	 */
 	public NeuralNetwork clone() {
 		try {
 			return (NeuralNetwork) super.clone();
@@ -395,7 +381,7 @@ public class NeuralNetwork implements Cloneable{
 		}
 		return null;
 	}
-	
+
 	public void render(Graphics g, int xo, int yo, int height, int width) {
 		int diameter = 20;
 		int yspacing = 10;
