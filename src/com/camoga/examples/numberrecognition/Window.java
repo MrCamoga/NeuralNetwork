@@ -1,8 +1,7 @@
-package com.camoga.nn;
+package com.camoga.examples.numberrecognition;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -14,7 +13,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.text.DecimalFormat;
 import java.util.Arrays;
 
 import javax.swing.JFileChooser;
@@ -26,6 +24,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+
+import com.camoga.nn.NeuralNetwork;
 
 public class Window extends JFrame implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -44,10 +44,13 @@ public class Window extends JFrame implements ActionListener {
 			
 		}
 		
+		int timer = 0;
 		@Override
 		protected void paintComponent(Graphics g) {
+			timer++;
 			super.paintComponent(g);
-			Main.nn.render(g, 50, 50, width-100, height-100);
+			Main.nn.renderNN(g, 0, 0, 1500, 900);
+			Main.nn.renderCostPlot(g, 500, 350, 500, 300, 0xffff0000);
 			
 			int[] pixels = new int[28*28];
 			for(int i = 0; i < pixels.length; i++) {
@@ -57,12 +60,25 @@ public class Window extends JFrame implements ActionListener {
 			image.setRGB(0, 0, 28, 28, pixels, 0, 28);
 			g.drawImage(image, 120*Main.nn.a.length, 150, null);
 			
+			g.setColor(Color.WHITE);
 			g.drawString((double)Main.nn.correct/(double)Main.nn.total*100+"% correct", 120*Main.nn.a.length, 200);
 			if(Main.testing) {
 				g.setColor(Color.red);
 				g.drawString("Testing...", 120*Main.nn.a.length, 250);				
 			}
 			if(paint != null)paint.draw(g);
+			
+			BufferedImage imageweights = new BufferedImage(28, 28, BufferedImage.TYPE_INT_ARGB);
+			for(int y = 0; y < 28; y++) {
+				for(int x = 0; x < 28; x++) {
+					double weight =  Main.nn.w[0][(timer/10)%20][x+y*28];
+//					System.out.println(Main.nn.w[0][0][0]);
+					int color = weight>0 ? (0xff | ((int) (Math.min(0xff,0xff*weight))<<24)):((0xff0000) | ((int) (Math.min(0xff,0xff*-weight))<<24));
+					pixels[x+y*28] = color;
+				}
+			}
+			imageweights.setRGB(0, 0, 28, 28, pixels, 0, 28);
+			g.drawImage(imageweights, 600, 100, 102, 102, null);
 			
 			try {
 				Thread.sleep(16);
@@ -103,9 +119,9 @@ public class Window extends JFrame implements ActionListener {
 		JPanel panel = new Panel();
 		add(panel);
 		
-//		paint = new Paint();
-//		panel.addMouseListener(paint);
-//		panel.addMouseMotionListener(paint);
+		paint = new Paint();
+		panel.addMouseListener(paint);
+		panel.addMouseMotionListener(paint);
 		
 		setVisible(true);
 		setLocationRelativeTo(null);

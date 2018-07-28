@@ -1,4 +1,4 @@
-package com.camoga.nn;
+package com.camoga.examples.numberrecognition;
 
 import java.awt.Graphics;
 import java.awt.Point;

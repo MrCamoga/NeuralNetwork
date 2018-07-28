@@ -1,12 +1,13 @@
-package com.camoga.nn;
+package com.camoga.examples.numberrecognition;
 
-import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 
+import com.camoga.nn.NeuralNetwork;
+
 public class Main {
 	
-	private final int batchsize = 60000;
+	private int batchsize = 120;
 	public static NeuralNetwork nn;
 	public Window window;
 	
@@ -14,7 +15,7 @@ public class Main {
 	
 	public Main(String path) {
 		initNN(path);
-		nn.lambda = 0.0021;
+		nn.lambda = 0.005;
 		trainNN();
 //		testNN("/train-images.idx3-ubyte", "/train-labels.idx1-ubyte");
 //		testNN("/t10k-images.idx3-ubyte", "/t10k-labels.idx1-ubyte");
@@ -27,14 +28,14 @@ public class Main {
 	
 	public void initNN(String path) {
 		if(path == null) {
-			nn = new NeuralNetwork(784, 50,50, 10);
+			nn = new NeuralNetwork(784, 20,20, 10);
 			nn.setActivations(new int[3]);
 		}
 		else try {
 			nn = new NeuralNetwork(new BufferedInputStream(getClass().getResourceAsStream(path)));
 //			nn.setActivations(new int[]{0,0,0});
 		} catch (IOException e) {
-				e.printStackTrace();
+			e.printStackTrace();
 		}
 		window = new Window();
 	}
@@ -45,12 +46,13 @@ public class Main {
 		
 		
 		try {
-			for(int a = 0; a < 100; a++) {
+			for(int a = 0; a < 10000; a++) {
 				BufferedInputStream imagesBuffer = new BufferedInputStream(getClass().getResourceAsStream("/train-images.idx3-ubyte"));
 				BufferedInputStream labelsBuffer = new BufferedInputStream(getClass().getResourceAsStream("/train-labels.idx1-ubyte"));
 				imagesBuffer.skip(16);
 				labelsBuffer.skip(8);
 				for(int batch = 0; batch < 60000/batchsize; batch++) {
+//					batchsize = 60;
 					targets = new double[batchsize][10];
 					for(int i = 0; i < batchsize; i++) {
 						for(int j = 0; j < pixels[i].length; j++) {
@@ -60,8 +62,8 @@ public class Main {
 						targets[i][number] = 1;
 					}				
 					feedNN(pixels, targets);
-					if(batch%20==0)testNN("/t10k-images.idx3-ubyte", "/t10k-labels.idx1-ubyte");
 				}
+			testNN("/t10k-images.idx3-ubyte", "/t10k-labels.idx1-ubyte");
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -91,7 +93,7 @@ public class Main {
 				
 				nn.feedForward(pixels);
 				nn.checkOutput(target);
-				cost += nn.computeCost(nn.a[nn.a.length-1], target)/10000;
+				cost += nn.computeCost(target)/10000;
 //				
 //				Thread.sleep(1200);
 			}
@@ -104,11 +106,6 @@ public class Main {
 	
 	public void feedNN(double[][] images, double[][] targets) {
 		nn.batchTrain(images, targets);
-		try {
-			Thread.sleep(500);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
 	}
 	
 }
