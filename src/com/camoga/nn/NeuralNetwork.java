@@ -2,11 +2,15 @@ package com.camoga.nn;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -17,11 +21,16 @@ public class NeuralNetwork implements Cloneable {
 	public double[][][] w;
 	public double[][] b;
 	public ActivationFunctions[] f;
+	public CostFunctions COSTFUNCTION = CostFunctions.QUADRATIC;
 
 	public static double lambda = 0.1;
 	
+	//TODO remove checking
 	public int correct = 0;
 	public int total = 0;
+	
+	private double maxCost = 0;
+	public ArrayList<Double> costOverTime = new ArrayList<Double>();
 
 	/**
 	 * After calling this constructor you should set the activation functions with setActivations();
@@ -35,14 +44,15 @@ public class NeuralNetwork implements Cloneable {
 	public void setActivations(int...id) {
 		if(id.length != w.length) throw new RuntimeException("Length of activation functions is incorrect");
 		this.f = new ActivationFunctions[id.length];
-		for(int i = 0; i < id.length; i++) {
+		for(int i = 0; i < id.length;i++) {
 			for(ActivationFunctions f : ActivationFunctions.values()) {
 				if(f.getId()==id[i]) {
 					this.f[i] = f;
 					break;
 				}
-				throw new RuntimeException("Could not find activation id");
 			}
+			//TODO
+//			throw new RuntimeException("Could not find activation id");
 		}
 	}
 	
@@ -84,8 +94,9 @@ public class NeuralNetwork implements Cloneable {
 		Random r = new Random();
 		for(int n = 0; n < w.length; n++) {
 			for (int i = 0; i < w[n].length; i++)
-				for (int j = 0; j < w[n][i].length; j++)
-					w[n][i][j] = r.nextDouble()  - 0.5;
+				for (int j = 0; j < w[n][i].length; j++) {
+					w[n][i][j] = r.nextGaussian()*0.2;					
+				}
 		}
 	}
 
@@ -107,7 +118,13 @@ public class NeuralNetwork implements Cloneable {
 //		Arrays.stream(l).forEach(i -> System.out.print(i+"×"));
 	}
 
-	public void train(double[] input, double[] target) {
+	/**
+	 * 
+	 * @param input
+	 * @param target
+	 * @return cost with respect to the input neurons, in case it's needed for further backprop. dJ/da0
+	 */
+	public double[] train(double[] input, double[] target) {
 		double[][][] dJdw = new double[w.length][][];
 		double[][] dJdb = new double[b.length][];
 		
@@ -122,29 +139,31 @@ public class NeuralNetwork implements Cloneable {
 		
 		//Backprop
 		double[] dJdy = sub(a[a.length-1], target);
-		double[] dydzl = activationPrime(z[z.length-1],f[f.length-1]);
-		double[] dJdzl = mul(dJdy, dydzl);
-		dJdw[a.length-2] = add(dJdw[a.length-2],matrixMul(a[a.length-2], dJdzl));
-		dJdb[a.length-2] = add(dJdb[a.length-2],dJdzl);
+		double[] dydz = activationPrime(z[z.length-1],f[f.length-1]);
+		double[] dJdz = mul(dJdy, dydz);
+		dJdw[a.length-2] = add(dJdw[a.length-2],matrixMul(a[a.length-2], dJdz));
+		dJdb[a.length-2] = add(dJdb[a.length-2],dJdz);
 		
-		for(int n = z.length-2; n > 0; n--) {
-			double[] dJda = mulMatrix(w[n+1], dJdzl);
+		for(int n = z.length-2; n >= 0; n--) {
+			double[] dJda = mulMatrix(w[n+1], dJdz);
 			double[] dadz = activationPrime(z[n],f[n]);
-			double[] dJdz = mul(dJda, dadz);
-			dJdw[n] = add(dJdw[n], matrixMul(a[n], dJdz));
-			dJdb[n] = add(dJdb[n], dJdz);
+			dJdz = mul(dJda, dadz);
+			dJdw[n] = matrixMul(a[n], dJdz);
+			dJdb[n] = dJdz;
 		}
 		
-		cost += computeCost(a[a.length-1], target)/input.length;
+		cost += computeCost(a[a.length-1], target);
 		
 		checkOutput(target);
 
 		gradientDescent(dJdw, dJdb);
 		
 		System.out.println("\nJ = " + cost);
+//		costOverTime.add(cost);
+		return mulMatrix(w[0], dJdz);
 	}
 	
-	public void batchTrain(double[][] input, double[][] target) {
+	public double[][] batchTrain(double[][] input, double[][] target) {
 		double[][][] dJdw = new double[w.length][][];
 		double[][] dJdb = new double[b.length][];
 		
@@ -152,27 +171,31 @@ public class NeuralNetwork implements Cloneable {
 			dJdw[n] = new double[w[n][0].length][w[n].length];
 			dJdb[n] = new double[a[n+1].length];
 		}
+		
+		double dJda1[][] = new double[input.length][a[0].length];
 
 		double cost = 0;
 		for(int i = 0; i < input.length; i++) {
 			double[][] z = feedForward(input[i]);
 			
 			//Backprop
-			double[] dJdy = sub(a[a.length-1], target[i]);
-			double[] dydzl = activationPrime(z[z.length-1],f[f.length-1]);
-			double[] dJdzl = mul(dJdy, dydzl);
-			dJdw[a.length-2] = add(dJdw[a.length-2],matrixMul(a[a.length-2], dJdzl));
-			dJdb[a.length-2] = add(dJdb[a.length-2],dJdzl);
+			double[] dJdy = costPrime(target[i]);
+			double[] dydz = activationPrime(z[z.length-1],f[f.length-1]);
+			double[] dJdz = mul(dJdy, dydz);
+			dJdw[a.length-2] = add(dJdw[a.length-2],matrixMul(a[a.length-2], dJdz));
+			dJdb[a.length-2] = add(dJdb[a.length-2],dJdz);
 			
-			for(int n = z.length-2; n > 0; n--) {
-				double[] dJda = mulMatrix(w[n+1], dJdzl);
+			for(int n = z.length-2; n >= 0; n--) {
+				double[] dJda = mulMatrix(w[n+1], dJdz);
 				double[] dadz = activationPrime(z[n],f[n]);
-				double[] dJdz = mul(dJda, dadz);
+				dJdz = mul(dJda, dadz);
 				dJdw[n] = add(dJdw[n], matrixMul(a[n], dJdz));
 				dJdb[n] = add(dJdb[n], dJdz);
 			}
 			
-			cost += computeCost(a[a.length-1], target[i])/input.length;
+			dJda1[i] = add(dJda1[i], mulMatrix(w[0], dJdz));
+//			System.out.println(dJda1[i][0]);
+			cost += computeCost(a[a.length-1], target[i]);
 			
 			checkOutput(target[i]);
 		}
@@ -182,9 +205,11 @@ public class NeuralNetwork implements Cloneable {
 //		System.out.println("\ncost derivative:");
 //		Arrays.stream(dJdy).forEach(i -> System.out.println(i));
 		System.out.println("\nJ = " + cost);
-//
+		if(cost > maxCost) maxCost = cost;
+		costOverTime.add(cost);
 //		System.err.println("Updating weights...");
 		
+		return dJda1;
 	}
 	
 	/**
@@ -197,13 +222,6 @@ public class NeuralNetwork implements Cloneable {
 			z[i] = add(b[i],matrixVecMult(a[i], w[i]));
 			a[i+1] = activation(z[i],f[i]);
 		}
-//		double[] z1 = add(b[0],matrixVecMult(a[0], w[0]));
-//		a[1] = activation(z1,f); // hidden layer
-//		double[] z2 = add(b[1],matrixVecMult(a[1], w[1]));
-//		a[2] = activation(z2,f); // hidden layer
-//		double[] z3 = add(b[2],matrixVecMult(a[2], w[2]));
-//		a[3] = activation(z3,f); // output layer
-//		System.out.println(z.length+" x " + z[0].length);
 		return a[z.length];
 	}
 	
@@ -214,13 +232,6 @@ public class NeuralNetwork implements Cloneable {
 			z[i] = add(b[i],matrixVecMult(a[i], w[i]));
 			a[i+1] = activation(z[i],f[i]);
 		}
-//		double[] z1 = add(b[0],matrixVecMult(a[0], w[0]));
-//		a[1] = activation(z1,f); // hidden layer
-//		double[] z2 = add(b[1],matrixVecMult(a[1], w[1]));
-//		a[2] = activation(z2,f); // hidden layer
-//		double[] z3 = add(b[2],matrixVecMult(a[2], w[2]));
-//		a[3] = activation(z3,f); // output layer
-//		System.out.println(z.length+" x " + z[0].length);
 		return z;
 	}
 	
@@ -241,21 +252,50 @@ public class NeuralNetwork implements Cloneable {
 		for(int n = 0; n < w.length; n++) {
 			for (int i = 0; i < w[n].length; i++) {
 				for (int j = 0; j < w[n][i].length; j++) {
-//					dw[n][i][j] = +lambda * dJdw[n][j][i];
 					w[n][i][j] -= lambda * dJdw[n][j][i]; // TODO rotate matrix						
 					
 				}
 			}
 			for(int i = 0; i < b[n].length; i++) {
-				b[n][i] += -lambda*dJdb[n][i];
+				b[n][i] -= lambda*dJdb[n][i];
 			}
 		}
 	}
 
+	public double computeCost(double[] target) {
+		return computeCost(a[a.length-1], target);
+	}
+	
 	public double computeCost(double[] output, double[] target) {
 		double result = 0;
-		for (int i = 0; i < output.length; i++)
-			result += 0.5 * Math.pow((output[i] - target[i]), 2);
+		for (int i = 0; i < output.length; i++) {
+			switch(COSTFUNCTION) {
+				case QUADRATIC:
+					result += 0.5 * Math.pow((output[i] - target[i]), 2);
+					break;
+				case CROSSENTROPY:
+					result += -(target[i]*Math.log(output[i])+(1-target[i])*Math.log(1-output[i]));
+					break;
+			}
+		}
+		return result/(double)output.length;
+	}
+	
+	public double[] costPrime(double[] target) {
+		double[] result = null;
+		switch (COSTFUNCTION) {
+			case QUADRATIC:
+				result = sub(a[a.length-1],target);
+				break;
+
+			case CROSSENTROPY:
+				result = new double[target.length];
+				for(int i = 0; i < result.length; i++) {
+					result[i] = (a[a.length-1][i] - target[i])/((1-a[a.length-1][i])*a[a.length-1][i]);
+				}
+				break;
+		}
+		
 		return result;
 	}
 
@@ -280,7 +320,8 @@ public class NeuralNetwork implements Cloneable {
 	}
 
 	public double[] mulMatrix(double[][] a, double[] z) {
-
+//		System.out.println(a.length+"x"+a[0].length);
+//		System.out.println(z.length);
 		double[] result = new double[a[0].length];
 		for (int i = 0; i < z.length; i++) {
 			for (int j = 0; j < a[0].length; j++) {
@@ -355,20 +396,30 @@ public class NeuralNetwork implements Cloneable {
 				output[i] = 2/(1+ex)-1;
 			}
 			break;
+		case RELU:
+			for (int i = 0; i < layer.length; i++) {
+				output[i] = Math.max(0, layer[i]);				
+			}
 		}
 		return output;
 	}
 
 	public double[] activationPrime(double[] layer, ActivationFunctions f) {
 		double[] result = null;
-		double[] s = activation(layer, f);
 		switch(f) {
 		case SIGMOID:
+			double[] s = activation(layer, f);
 			result = mul(s, sub(1, s));
 			break;
 		case TANH:
-			result = sub(1, mul(s, s));
+			double[] s2 = activation(layer, f);
+			result = sub(1, mul(s2, s2));
 			break;
+		case RELU:
+			result = new double[layer.length];
+			for(int i = 0; i < layer.length; i++) {
+				result[i] = layer[i] > 0 ? 1:0;
+			}
 		}
 		return result;
 	}
@@ -381,19 +432,66 @@ public class NeuralNetwork implements Cloneable {
 		}
 		return null;
 	}
+	
+	public void renderCostPlot(Graphics g, int xo, int yo, int width, int height, int color) {
+		
+		//Points
+		int x, y;
+		int xlast = 0, ylast = 0;
+		g.setColor(new Color(color));
+		int maxpoints = 200;
+		int start = (int)Math.max(0, costOverTime.size()-maxpoints);
+		double maxCost = 0;
+		double minCost = Double.MAX_VALUE;
+		int size = (int)Math.min(costOverTime.size(), maxpoints);
+		for(int i = 0; i < size; i+=1) {
+			int index = i + start;
+			x = (int) (xo + width*i/size);
+			if(maxCost < costOverTime.get(index)) maxCost = costOverTime.get(index);
+			if(minCost > costOverTime.get(index)) minCost = costOverTime.get(index);
+			y = (int) (yo + height*(1-costOverTime.get(index)/(maxCost)));
+			
+			if(i > 0) g.drawLine(xlast, ylast, x, y);
+			g.fillOval(x-1, y-1, 2, 2);
+			xlast = x;
+			ylast = y;
+		}
+		
+		//Plot
+		g.setColor(Color.BLACK);
+		//Axes
+		g.drawLine(xo, yo, xo, yo+height);
+		g.drawLine(xo, yo+height, xo+width, yo+height);
+		g.drawString(maxCost+"", xo, yo);
+		
+		int num = (int)(10*Math.ceil(costOverTime.size()/100));
+		if(num == 0) num = 2;
+		
+		for(int m = 0; m <= costOverTime.size()/num; m++) {
+			int xm = (int) (xo+m*num/(double)costOverTime.size()*width);
+//			System.out.println(costOverTime.size());
+//			System.out.println(xm);
+			g.drawLine(xm, yo+height-10, xm, yo+height+10);
+			g.drawString(start+m*num+"", xm, yo+height+20);
+		}
+		
+		//Current
+		g.drawLine(xo, ylast, xo+width, ylast);
+		if(costOverTime.size() > 0)g.drawString(""+costOverTime.get(costOverTime.size()-1), xo, ylast);
+	}
 
-	public void render(Graphics g, int xo, int yo, int height, int width) {
-		int diameter = 20;
-		int yspacing = 10;
+	public void renderNN(Graphics g, int xo, int yo, int width, int height) {
+		int diameter = 15;
+		int yspacing = 7;
 		int xspacing = 100;
-		int maxneurons = 12;
+		int maxneurons = 10;
 		
 		int[] yoa = new int[a.length];
 		for(int n = 0; n < yoa.length; n++) {
 			yoa[n] = a[n].length > maxneurons ? (height-maxneurons*(diameter+yspacing))/2:(height-a[n].length*(diameter+yspacing))/2;
 		}
-		
 		g.setFont(new Font("Arial", Font.BOLD, 9));
+		FontMetrics fontm = g.getFontMetrics();
 		g.setColor(new Color(0xb0, 0xc0, 0x20));
 		g.fillRect(xo-10, yo-10, width, height);
 		
@@ -424,12 +522,86 @@ public class NeuralNetwork implements Cloneable {
 				int y = yoa[n]+i*(diameter+yspacing);
 				g.fillOval(xspacing*n+xo, y+yo, diameter, diameter);
 				g.setColor(activation>0.8 ? Color.black:Color.white);
-				g.drawString(new DecimalFormat("#.##").format(activation)+"", xspacing*n+xo+diameter/4-3, yo+y+diameter/4*3);
+				String o = new DecimalFormat("#.##").format(activation)+"";
+				g.drawString(o, 
+						xspacing*n+xo+(diameter-fontm.stringWidth(o))/2, 
+						yo+y+(diameter-fontm.getHeight())/2+fontm.getAscent());
 			}
 		}
 		for(int n = 0; n < b.length; n++) {
 			g.setColor(Color.white);
 			g.fillOval(xspacing*n+xo, yo+height-yoa[n], diameter, diameter);
+		}
+	}
+	
+	/**
+	 * Save all neural network
+	 * @param path
+	 */
+	public void save(String path) {
+		saveLayers(0, a.length, path);
+	}
+	
+	/**
+	 * Save some layers
+	 * @param layerStart
+	 * @param layerEnd
+	 * @param path
+	 */
+	public void saveLayers(int layerStart, int layerEnd, String path) {
+		try {
+			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(path));
+			bos.write(layerEnd-layerStart);
+			//NN Layers
+			for(int n = layerStart; n < layerEnd; n++) {
+				byte[] bytes = new byte[4];
+				ByteBuffer.wrap(bytes).putInt(a[n].length);
+				bos.write(bytes);
+			}
+			for(int n = layerStart; n < layerEnd-1; n++) {
+				bos.write(f[n].getId());
+			}
+			//NN weights
+			for(int i = layerStart; i < layerEnd-1; i++) {
+				for(int j = 0; j < w[i].length; j++) {
+					for(int k = 0; k < w[i][j].length; k++) {
+						byte[] bytes = new byte[8];
+						ByteBuffer.wrap(bytes).putDouble(w[i][j][k]);
+						bos.write(bytes);
+//						System.err.println(Arrays.toString(bytes));
+					}
+				}
+			}
+			//NN Biases
+			for(int i = layerStart; i < layerEnd-1; i++) {
+				for(int j = 0; j < b[i].length; j++) {
+					byte[] bytes = new byte[8];
+					ByteBuffer.wrap(bytes).putDouble(b[i][j]);
+					bos.write(bytes);
+				}
+			}
+			System.err.println("Saved");
+			bos.flush();
+			bos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void saveCost(String path) {
+		try {
+			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(path));
+		
+			for(double c : costOverTime) {
+				byte[] bytes = new byte[8];
+				ByteBuffer.wrap(bytes).putDouble(c);
+				bos.write(bytes);
+			}
+			System.err.println("Saved!");
+			bos.flush();
+			bos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 }

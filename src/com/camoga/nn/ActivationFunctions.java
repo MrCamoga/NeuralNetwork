@@ -5,7 +5,7 @@ package com.camoga.nn;
  * TANH(1)
  */
 public enum ActivationFunctions {
-	SIGMOID(0), TANH(1);
+	SIGMOID(0), TANH(1), RELU(2);
 	
 	private int id;
 	
