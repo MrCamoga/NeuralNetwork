@@ -18,19 +18,21 @@ public class CNN {
 	//TODO more than one image on input (input[][][] and filter[][][][])
 	double[][] input;
 	double[][][][] kernel1, kernel2, kernel3;
-	double[][][] conv1, sample1, conv2, conv3, sample2;
+	double[][][] conv1, relu1, sample1, conv2, relu2, conv3, relu3, sample2;
 	NeuralNetwork nn;
 	
-	private double lambda = 0.5;
+	private double lambda = 0.00001;
 	
 	class Panel extends JPanel {
 		
-		int zoom = 2;
+		int zoom = 1;
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);
 			
 			BufferedImage img = createImage(input);
 			g.drawImage(img, 0, 50*zoom, img.getWidth()*zoom, img.getHeight()*zoom, null);
+			
+			nn.renderCostPlot(g, 80, 500, 300, 200, 0xffff0000);
 			
 //			BufferedImage img2 = createImage(convolution);
 //			g.drawImage(img2, img.getWidth()*16, (img.getHeight()-img2.getHeight())*8,img2.getWidth()*16, img2.getHeight()*16, null);
@@ -46,7 +48,7 @@ public class CNN {
 			}
 
 			for(int i = 0; i < conv1.length; i++) {
-				BufferedImage img2 = createImage(conv1[i]);
+				BufferedImage img2 = createImage(relu1[i]);
 				g.drawImage(img2, 200, (20+img2.getHeight())*zoom*i,img2.getWidth()*zoom, img2.getHeight()*zoom, null);
 			}
 			
@@ -64,7 +66,7 @@ public class CNN {
 			}
 			
 			for(int i = 0; i < conv2.length; i++) {
-				BufferedImage img2 = createImage(conv2[i]);
+				BufferedImage img2 = createImage(relu2[i]);
 				g.drawImage(img2, 800, (20+img2.getHeight())*zoom*i,img2.getWidth()*zoom*2, img2.getHeight()*zoom*2, null);
 			}
 			
@@ -76,8 +78,8 @@ public class CNN {
 			}
 			
 			for(int i = 0; i < conv3.length; i++) {
-				BufferedImage img2 = createImage(conv3[i]);
-				g.drawImage(img2, 800, 400+(20+img2.getHeight())*zoom*i,img2.getWidth()*zoom*2, img2.getHeight()*zoom*2, null);
+				BufferedImage img2 = createImage(relu3[i]);
+				g.drawImage(img2, 730, 400+(20+img2.getHeight())*zoom*i,img2.getWidth()*zoom*2, img2.getHeight()*zoom*2, null);
 			}
 			
 			for(int i = 0; i < sample2.length; i++) {
@@ -121,40 +123,40 @@ public class CNN {
 	public CNN() {
 		loadNumberImages();
 		
-		
-//		Arrays.stream(kernel).forEach((double[] d) -> Arrays.stream(d).forEach((double d2) -> d2 /= 16));
-		
 		int inputimages = 1;
-		int outputimages1 = 5;
-		int outputimages2 = 6;
-		int outputimages3 = 3;
-		int kernelSize = 3;
+		//FIXME outputimage1 cant be greater than outputimage2
+		int outputimages1 = 6;
+		int outputimages2 = 18;
+		int outputimages3 = 14;
+		int kernelSize = 5;
 		int imagewidth = 28, imageheight = 28;
 		
 		kernel1 = new double[inputimages][outputimages1][kernelSize][kernelSize];
 		conv1 = new double[outputimages1][imageheight][imagewidth];
+		relu1 = new double[conv1.length][conv1[0].length][conv1[0][0].length];
 		sample1 = new double[conv1.length][(int)Math.ceil(conv1[0].length/2)][(int)Math.ceil(conv1[0][0].length/2)];
 		
 		kernel2 = new double[sample1.length][outputimages2][kernelSize][kernelSize];
 		conv2 = new double[outputimages2][sample1[0].length][sample1[0][0].length];
+		relu2 = new double[conv2.length][conv2[0].length][conv2[0][0].length];
 		
 		kernel3 = new double[conv2.length][outputimages3][kernelSize][kernelSize];
 		conv3 = new double[outputimages3][conv2[0].length][conv2[0][0].length];
+		relu3 = new double[conv3.length][conv3[0].length][conv3[0][0].length];
 		
 		sample2 = new double[conv3.length][(int)Math.ceil(conv3[0].length/2)][(int)Math.ceil(conv3[0][0].length/2)];
 		
 		nn = new NeuralNetwork(sample2.length*sample2[0].length*sample2[0][0].length,20,20,10);
 		nn.setActivations(new int[3]);
-		nn.lambda = 0.01;
-//		System.out.println(sample2.length*sample2[0].length*sample2[0][0].length);
+		nn.lambda = 0.0001;
 		
 		//Random init kernels
-		Random r = new Random(2);
+		Random r = new Random();
 		for(int m = 0; m < kernel1.length; m++) {
 			for(int n = 0; n < kernel1[m].length; n++) {
 				for(int i = 0; i < kernel1[m][n].length; i++) {
 					for(int j = 0; j < kernel1[m][n][i].length; j++) {
-						kernel1[m][n][i][j] = r.nextGaussian()*0.12;
+						kernel1[m][n][i][j] = r.nextGaussian();
 //					if(filter1[n][i][j] > 1) filter1[n][i][j] = 1;
 					}
 				}
@@ -165,7 +167,7 @@ public class CNN {
 			for(int m = 0; m < kernel2[n].length; m++) {
 				for(int i = 0; i < kernel2[n][m].length; i++) {
 					for(int j = 0; j < kernel2[n][m][i].length; j++) {
-						kernel2[n][m][i][j] = r.nextGaussian()*0.12;
+						kernel2[n][m][i][j] = r.nextGaussian();
 					}
 				}
 				
@@ -176,7 +178,7 @@ public class CNN {
 			for(int m = 0; m < kernel3[n].length; m++) {
 				for(int i = 0; i < kernel3[n][m].length; i++) {
 					for(int j = 0; j < kernel3[n][m][i].length; j++) {
-						kernel3[n][m][i][j] = r.nextGaussian()*0.12;
+						kernel3[n][m][i][j] = r.nextGaussian();
 					}
 				}
 				
@@ -190,6 +192,15 @@ public class CNN {
 				double[][][] batchImages = new double[batchSize][][];
 				double[][] batchTargets = new double[batchSize][];
 				for(int i = 0; i < batchSize; i++) {
+//					System.out.println("{");
+//					for(int m = 0; m < kernel1[0][0].length; m++) {
+//						System.out.print("{");
+//						for(int n = 0; n < kernel1[0][0][m].length; n++) {
+//							System.out.print(kernel1[0][0][m][n]+", ");
+//						}
+//						System.out.println("},");
+//					}
+//					System.out.println("}");
 //					train(IMAGES[i], TARGETS[i]);
 					batchImages[i] = IMAGES[batch*batchSize+i];
 					batchTargets[i] = TARGETS[batch*batchSize+i];
@@ -199,6 +210,7 @@ public class CNN {
 		}
 	}
 	
+	//TODO backprop in single training 
 	public void train(double[][] image, double[] target) {
 		this.input = image;
 		for(int m = 0; m < kernel1.length; m++) {
@@ -260,6 +272,11 @@ public class CNN {
 	
 	public void batchTrain(double[][][] image, double[][] target) {
 		double[][] nninput = new double[image.length][sample2.length*sample2[0].length*sample2[0][0].length];
+		
+		double[][][][] dJdK3 = new double[kernel3.length][kernel3[0].length][kernel3[0][0].length][kernel3[0][0][0].length];
+		double[][][][] dJdK2 = new double[kernel2.length][kernel2[0].length][kernel2[0][0].length][kernel2[0][0][0].length];
+		double[][][][] dJdK1 = new double[kernel1.length][kernel1[0].length][kernel1[0][0].length][kernel1[0][0][0].length];
+		
 		for(int i = 0; i < image.length; i++) {
 			this.input = image[i];
 			for(int m = 0; m < kernel1.length; m++) {
@@ -270,38 +287,38 @@ public class CNN {
 			
 			//Relu
 			for(int n = 0; n < conv1.length; n++) {
-				relu(conv1[n]);
+				relu1[n] = relu(conv1[n]);
 			}
-			
 			
 			for(int n = 0; n < sample1.length; n++) {
-				sample1[n] = subsampling(conv1[n]);
+				sample1[n] = subsampling(relu1[n]);
 			}
 			
-			for(int n = 0; n < kernel2.length; n++) {
-				for(int m = 0; m < kernel2[n].length; m++) {
-					if(n == 0) conv2[m] = convolve(sample1[n], kernel2[n][m]);
-					else conv2[m] = add(conv2[m], convolve(sample1[n], kernel2[n][m]));
+			//FIXME convolution may have blue pixels
+			for(int m = 0; m < kernel2.length; m++) {
+				for(int n = 0; n < kernel2[m].length; n++) {
+					if(m == 0) conv2[n] = convolve(sample1[m], kernel2[m][n]);
+					else conv2[n] = add(conv2[n], convolve(sample1[m], kernel2[m][n]));
 				}
 			}
 			
 			for(int n = 0; n < conv2.length; n++) {
-				relu(conv2[n]);
+				relu2[n] = relu(conv2[n]);
 			}
 			
-			for(int n = 0; n < kernel3.length; n++) {
-				for(int m = 0; m < kernel3[n].length; m++) {
-					if(n == 0) conv3[m] = convolve(conv2[n], kernel3[n][m]);
-					else conv3[m] = add(conv3[m], convolve(conv2[n], kernel3[n][m]));
+			for(int m = 0; m < kernel3.length; m++) {
+				for(int n = 0; n < kernel3[m].length; n++) {
+					if(m == 0) conv3[n] = convolve(relu2[m], kernel3[m][n]);
+					else conv3[n] = add(conv3[n], convolve(relu2[m], kernel3[m][n]));
 				}
 			}
 			
 			for(int n = 0; n < conv3.length; n++) {
-				relu(conv3[n]);
+				relu3[n] = relu(conv3[n]);
 			}
 			
 			for(int n = 0; n < sample2.length; n++) {
-				sample2[n] = subsampling(conv3[n]);
+				sample2[n] = subsampling(relu3[n]);
 			}
 			int index = 0;
 			for(int n = 0; n < sample2.length; n++) {
@@ -312,58 +329,55 @@ public class CNN {
 					}
 				}
 			}
-		}
 		
 		//TODO IMPLEMENT CONV BIAS
 		//Backpropagation
+		//FIXME it's doing backprop with all the inputs
 		double[][] dJda = nn.batchTrain(nninput, target);
 		
-		double[][][][] dJdK3 = new double[kernel3.length][kernel3[0].length][kernel3[0][0].length][kernel3[0][0][0].length];
-		double[][][][] dJdK2 = new double[kernel2.length][kernel2[0].length][kernel2[0][0].length][kernel2[0][0][0].length];
-		double[][][][] dJdK1 = new double[kernel1.length][kernel1[0].length][kernel1[0][0].length][kernel1[0][0][0].length];
-		
 //		long last = System.nanoTime();
-		for(int i = 0; i < image.length; i++) {
-			double[][][] dJds3 = new double[sample2.length][sample2[0].length][sample2[0][0].length];
-			double[][][] dJdO3 = new double[sample2.length][][];
-			int index = 0;
+			double[][][] dJds2 = new double[sample2.length][sample2[0].length][sample2[0][0].length];
+			double[][][] dJdr3 = new double[sample2.length][][];
+			int index2 = 0;
 			//Third pool layer
-			for(int m = 0; m < dJds3.length; m++) {
-				for(int n = 0; n < dJds3[m].length; n++) {
-					for(int o = 0; o < dJds3[m][n].length; o++) {
-						dJds3[m][n][o] = dJda[i][index];
-						index++;
+			for(int m = 0; m < dJds2.length; m++) {
+				for(int n = 0; n < dJds2[m].length; n++) {
+					for(int o = 0; o < dJds2[m][n].length; o++) {
+						dJds2[m][n][o] = dJda[i][index2];
+						index2++;
 					}
 				}
-				dJdO3[m] = upsampling(dJds3[m], conv3[m]);
+				dJdr3[m] = upsampling(dJds2[m], relu3[m]);
 			}
 			
-			//Third conv layer
+			//Relu3
+			double[][][] dJdO3 = new double[sample2.length][][];
+			for(int m = 0; m < dJdO3.length; m++) {
+				dJdO3[m] = reluPrime(dJdr3[m]);
+			}
+			
+			//Third conv layer weights
 			for(int m = 0; m < kernel3.length; m++) {
 				for(int n = 0; n < kernel3[m].length; n++) {
-					dJdK3[m][n] = add(dJdK3[m][n],dJdK(conv2[m], dJdO3[n], kernel3[m][n]));
+					dJdK3[m][n] = add(dJdK3[m][n],dJdK(relu2[m], dJdO3[n], kernel3[m][n]));
 				}
 			}
 			
-			double[][][] dJds2 = new double[conv2.length][conv2[0].length][conv2[0][0].length];
-			double[][][] dJdO2 = new double[conv2.length][][];
-			
-			//XXX probably wrong
+			double[][][] dJdr2 = new double[conv2.length][conv2[0].length][conv2[0][0].length];
+			//Third conv layer input
 			for(int a = 0; a < kernel3.length; a++) {
 				for(int b = 0; b < kernel3[a].length; b++) {
-					dJds2[a] = add(dJds2[a], dJdI(dJdO3[b], kernel3[a][b]));					
+					dJdr2[a] = add(dJdr2[a], dJdI(dJdO3[b], kernel3[a][b]));					
 				}
 			}
 			
-			for(int a = 0; a < conv2.length; a++) {
-				System.out.println(conv2[a].length);
-			}
-			//Second pool layer
-			for(int m =0; m < dJdO2.length; m++) {
-				dJdO2[m] = upsampling(dJds2[m], conv2[m]);				
+			//Relu2
+			double[][][] dJdO2 = new double[conv2.length][conv2[0].length][conv2[0][0].length];
+			for(int m = 0; m < dJdO2.length; m++) {
+				dJdO2[m] = reluPrime(dJdr2[m]);
 			}
 			
-			//Second conv layer
+			//Second conv layer weights
 			for(int m = 0; m < kernel2.length; m++) {
 				for(int n = 0; n < kernel2[m].length; n++) {
 					dJdK2[m][n] = add(dJdK2[m][n],dJdK(sample1[m], dJdO2[n], kernel2[m][n]));
@@ -371,9 +385,8 @@ public class CNN {
 			}
 			
 			double[][][] dJds1 = new double[sample1.length][sample1[0].length][sample1[0][0].length];
-			double[][][] dJdO1 = new double[sample1.length][][];
+			double[][][] dJdr1 = new double[sample1.length][][];
 			
-			//XXX probably wrong
 			for(int a = 0; a < kernel2.length; a++) {
 				for(int b = 0; b < kernel2[a].length; b++) {
 					dJds1[a] = add(dJds1[a], dJdI(dJdO2[b], kernel2[a][b]));					
@@ -381,39 +394,22 @@ public class CNN {
 			}
 			
 			//First pool layer
-			for(int m =0; m < dJdO1.length; m++) {
-				dJdO1[m] = upsampling(dJds1[m], conv1[m]);				
+			for(int m =0; m < dJdr1.length; m++) {
+				dJdr1[m] = upsampling(dJds1[m], relu1[m]);				
+			}
+			
+			double[][][] dJdO1 = new double[conv1.length][conv1[0].length][conv1[0][0].length];
+			for(int m = 0; m < dJdO1.length; m++) {
+				dJdO1[m] = reluPrime(dJdr1[m]);
 			}
 			
 			//First Conv layer
 			for(int m = 0; m < kernel1.length; m++) {
-				for(int n = 0; n < kernel1.length; n++) {
-					dJdK1[m][n] = add(dJdK1[m][n],dJdK(sample1[m], dJdO2[n], kernel1[n][n]));					
+				for(int n = 0; n < kernel1[m].length; n++) {
+					dJdK1[m][n] = add(dJdK1[m][n],dJdK(input, dJdO1[n], kernel1[m][n]));					
 				}
 			}
-			
-//			for(int a = 0; a < dJdsample2[0].length; a++) {
-//				System.out.print("{{");
-//				for(int b = 0; b < dJdsample2[0][a].length; b++) {
-//					System.out.print((int)(dJdsample2[0][a][b]*1000) + ", ");
-//				}
-//				System.out.println("},");
-//			}
-//			System.out.println();
-//			
-//			for(int a = 0; a < dJdO2[0].length; a++) {
-//				System.out.print("{{");
-//				for(int b = 0; b < dJdO2[0][a].length; b++) {
-//					System.out.print((int)(dJdO2[0][a][b]*1000) + ", ");
-//				}
-//				System.out.println("},");
-//			}
-
-//			System.out.println(dJda[i][49]-dJdsample2[1][0][0]);
 		}
-//		long now = System.nanoTime();
-//		System.out.println((now-last)/1000000.0);
-//		System.out.println(dJdK2[0][0][0][0]);
 		gradientDescent(dJdK1, dJdK2, dJdK3);
 		
 	}
@@ -492,7 +488,6 @@ public class CNN {
 						result += kernel[i][j]*image[y+i][x+j];
 					}
 				}
-//				result /= kernel.length*kernel[0].length;
 				convolution[y][x] = result;
 			}
 		}
@@ -515,7 +510,6 @@ public class CNN {
 						result += kernel[i][j]*image[yo][xo];
 					}
 				}
-//				result /= kernel.length*kernel[0].length;
 				convolution[y][x] = result;
 			}
 		}
@@ -599,13 +593,28 @@ public class CNN {
 		return dadz;
 	}
 	
-	public void relu(double[][] image) {
+	public double[][] relu(double[][] image) {
+		double[][] relu = new double[image.length][image[0].length];
 		for(int i = 0; i < image.length; i++) {
 			for(int j = 0; j < image.length; j++) {
-				if(image[i][j] < 0) image[i][j] = 0;	
-				if(image[i][j] > 1) image[i][j] = 1;
+				if(image[i][j] < 0) relu[i][j] = 0;	
+				else if(image[i][j] > 1) relu[i][j] = 1;
+				else relu[i][j] = image[i][j];
 			}
 		}
+		return relu;
+	}
+	
+	public double[][] reluPrime(double[][] dJ) {
+		double[][] relup = new double[dJ.length][dJ[0].length];
+		for(int i = 0; i < dJ.length; i++) {
+			for(int j = 0; j < dJ[i].length; j++) {
+				if(dJ[i][j] < 0) relup[i][j] = 0;	
+				else if(dJ[i][j] < 1) relup[i][j] = 1;
+				else relup[i][j] = 0;
+			}
+		}
+		return relup;
 	}
 	
 	//XXX may be the same!
@@ -633,7 +642,6 @@ public class CNN {
 		double[][] upsample = new double[original.length][original[0].length];
 		int maxX, maxY;
 		double maxvalue = 0;
-//		System.out.println("original: " + original.length +"×"+original[0].length +", dJds: " + dJds.length +"×" + dJds[0].length );
 		for(int y = 0; y < dJds.length; y++) {
 			for(int x = 0; x < dJds[y].length; x++) {
 				maxX = 0;
@@ -643,8 +651,6 @@ public class CNN {
 					int yo = y*2+yi;
 					for(int xi = 0; xi < 2; xi++) {
 						int xo = x*2+xi;
-//						System.out.println("x: " + x);
-//						System.out.println("yi: " + yi);
 						double value = original[yo][xo];
 						if(maxvalue < value) {
 							maxvalue = value;
