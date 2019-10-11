@@ -15,7 +15,7 @@ public class Main {
 	
 	public Main(String path) {
 		initNN(path);
-		nn.lambda = 0.005;
+		nn.setLearningRate(0.005);
 		trainNN();
 //		testNN("/train-images.idx3-ubyte", "/train-labels.idx1-ubyte");
 //		testNN("/t10k-images.idx3-ubyte", "/t10k-labels.idx1-ubyte");
@@ -29,7 +29,7 @@ public class Main {
 	public void initNN(String path) {
 		if(path == null) {
 			nn = new NeuralNetwork(784, 20,20, 10);
-			nn.setActivations(new int[3]);
+			nn.setActivations(new int[] {2,2,3});
 		}
 		else try {
 			nn = new NeuralNetwork(new BufferedInputStream(getClass().getResourceAsStream(path)));

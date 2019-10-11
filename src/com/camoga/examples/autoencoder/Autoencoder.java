@@ -12,14 +12,14 @@ import com.camoga.utils.LoadImage;
 
 public class Autoencoder {
 
-	private int batchsize = 16;
+	private int batchsize = 13;
 	public NeuralNetwork nn;
 	public Window window;
 	
 	public static int WIDTH;
 	public static int HEIGHT;
 	
-	public static final int numOfFeatures = 80;
+	public static final int numOfFeatures = 20;
 	
 	public double[][] IMAGES;
 	public double[][] VALIDATIONIMAGES;
@@ -31,10 +31,12 @@ public class Autoencoder {
 		loadFaceImages();
 //		loadValidationImages();
 		initNN(path);
-//		nn.COSTFUNCTION = CostFunctions.CROSSENTROPY;
-		nn.lambda = 0.001;
+		nn.COSTFUNCTION = CostFunctions.CROSSENTROPY;
+		nn.setLearningRate(0.0001);
 		if(batchsize > IMAGES.length) batchsize = IMAGES.length;
 		System.out.println(WIDTH+","+HEIGHT);
+//		training = true;
+//		trainNN();
 	}
 	
 	public void initNN(String path) {
@@ -55,9 +57,9 @@ public class Autoencoder {
 		System.out.println("======================\nLOADING TRAINING SET\n======================");
 		//Find files
 		DirectoryScanner scanner = new DirectoryScanner();
-		scanner.setIncludes(new String[] {"**/*_2.pgm"});
-//		scanner.setExcludes(new String[] {"**/*Ambient.pgm","yaleB39/*.pgm"});
-//		scanner.setExcludes(new String[] {"**/*_2.pgm", "**/*_4.pgm"});
+		scanner.setIncludes(new String[] {"**/*straight*_4.pgm"});
+//		scanner.setExcludes(new String[] {"**/*Ambient.pgm","yaleB39/*.pgm","**/*_4.pgm", });
+		scanner.setExcludes(new String[] {"**/*_2.pgm","**/*sunglasses*.pgm"});
 		scanner.setBasedir("C:\\Users\\usuario\\workspace\\NEURALNET\\Neural Network\\res\\faces\\faces");
 		scanner.scan();
 		String[] files = scanner.getIncludedFiles();
@@ -128,7 +130,7 @@ public class Autoencoder {
 	}
 
 	public static void main(String[] args) {
-//		new Autoencoder("/faces/faces/encoder.gaconvi");
+//		new Autoencoder("/PCA/autoencoder2.gaconvi");
 		new Autoencoder(null);
 	}
 	
@@ -187,7 +189,8 @@ public class Autoencoder {
 		double[][] encodedImages = new double[IMAGES.length+(VALIDATIONIMAGES!=null ? VALIDATIONIMAGES.length:0)][numOfFeatures];
 		for(int i = 0; i < IMAGES.length; i++) {
 			double[] encode = nn.feed(IMAGES[i]);
-			System.arraycopy(encode, 0, encodedImages[i], 0, encode.length);
+			double[] image = encodedImages[i];
+			System.arraycopy(encode, 0, image, 0, encode.length);
 		}
 		if(VALIDATIONIMAGES!=null)
 		for(int i = 0; i < VALIDATIONIMAGES.length; i++) {

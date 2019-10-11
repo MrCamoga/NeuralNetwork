@@ -168,7 +168,7 @@ public class Window extends JFrame implements ActionListener {
 			JTextField l = new JTextField();
 			panel2.add(l);
 			int result2 = JOptionPane.showConfirmDialog(this, panel2, "Update Learning Rate", JOptionPane.OK_CANCEL_OPTION);
-			if(result2 == JOptionPane.OK_OPTION) Main.nn.lambda = Integer.parseInt(l.getText());
+			if(result2 == JOptionPane.OK_OPTION) Main.nn.setLearningRate(Double.parseDouble(l.getText()));
 			break;
 		}
 	}

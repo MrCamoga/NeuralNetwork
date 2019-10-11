@@ -24,17 +24,25 @@ import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import com.camoga.nn.NeuralNetwork;
+import com.camoga.utils.MatrixNd;
+import com.camoga.utils.PCA;
+import com.camoga.utils.VecNd;
 
 public class Window extends JFrame implements ActionListener {
 	
 	private Autoencoder main;
 	
 	public JSlider[] sliders;
+	public JPanel sliderPanel;
+	public JButton randomize;
 	
 	public boolean encoder = true;
 	public boolean decoder = true;
+	public boolean sliderchanged = false;
 	
 	public boolean showNN = true, showImages = true, showCost = true;
 	
@@ -51,11 +59,21 @@ public class Window extends JFrame implements ActionListener {
 		int[] pixels, pixels2;
 		BufferedImage image, image2;
 		
-		int imagezoom = 4;
+		int imagezoom = 2;
 		protected void paintComponent(Graphics g) {
 			timer++;
 			super.paintComponent(g);
-			if(decoder && !encoder) main.nn.feed(getSliderValues());
+			if(decoder && !encoder) {
+				sliderPanel.setVisible(true);
+				randomize.setVisible(true);
+				if(sliderchanged) {
+					main.nn.feed(eigenvectors.multiply(getSliderValues()).xs);
+					sliderchanged = false;
+				}
+			} else {
+				sliderPanel.setVisible(false);
+				randomize.setVisible(false);
+			}
 //			BufferedImage result = new BufferedImage(2000, 18000, BufferedImage.TYPE_INT_ARGB);
 //			Graphics g2 = result.getGraphics();
 			if(showNN)main.nn.renderNN(g, 20, 0, 1200, 800);
@@ -102,36 +120,37 @@ public class Window extends JFrame implements ActionListener {
 //				image3.setRGB(0, 0, Autoencoder.WIDTH, Autoencoder.HEIGHT, pixels3, 0, Autoencoder.WIDTH);
 //				g.drawImage(image3, 0, 0, Autoencoder.WIDTH*4, Autoencoder.HEIGHT*4, null);				
 //			}
-			if(encodedImages!=null) {
-				g.setColor(Color.black);
-				g.drawLine(500, 200, 500, 300);
-				g.drawLine(500, 200, 600, 200);
-				g.drawLine(600, 200, 600, 300);
-				g.drawLine(500, 300, 600, 300);
-				g.setColor(Color.red);
-//				System.out.println(timer);
-				for(int i = 0; i < encodedImages[(timer/10)%80].length; i++) {
-					for(int j = 0; j < encodedImages[(timer/10+1)%80].length; j++) {
-						g.fillOval(500+(int)(encodedImages[(timer/10)%80][i]*200), (int)(200+encodedImages[(timer/10+1)%80][j]*200), 3, 3);
-					}
-				}
-			}
+			
+//			if(encodedImages!=null) {
+//				g.setColor(Color.black);
+//				g.drawLine(500, 200, 500, 300);
+//				g.drawLine(500, 200, 600, 200);
+//				g.drawLine(600, 200, 600, 300);
+//				g.drawLine(500, 300, 600, 300);
+//				g.setColor(Color.red);
+////				System.out.println(timer);
+//				for(int i = 0; i < encodedImages[(timer/10)%80].length; i++) {
+//					for(int j = 0; j < encodedImages[(timer/10+1)%80].length; j++) {
+//						g.fillOval(500+(int)(encodedImages[(timer/10)%80][i]*200), (int)(200+encodedImages[(timer/10+1)%80][j]*200), 3, 3);
+//					}
+//				}
+//			}
 			
 			repaint();
 		}
 		
 	}
 	
-	public double[] getSliderValues() {
+	public VecNd getSliderValues() {
 		double[] inputs = new double[main.numOfFeatures];
 		for(int i = 0; i < sliders.length; i++) {
 			inputs[i] = sliders[i].getValue()/100.0D;
 		}
-		return inputs;
+		return new VecNd(inputs);
 	}
 		
 	public Window(int width, int height) {
-		super("Number Autoencoder - by MrCamoga");
+		super("Autoencoder - by MrCamoga");
 		
 		setSize(width, height);
 		setResizable(true);
@@ -208,10 +227,15 @@ public class Window extends JFrame implements ActionListener {
 		sliders = new JSlider[main.numOfFeatures];
 		for(int i = 0; i < sliders.length; i++) {
 			sliders[i] = new JSlider(SwingConstants.VERTICAL, 0, 100, 50);
+			sliders[i].addChangeListener(new ChangeListener() {
+				public void stateChanged(ChangeEvent e) {
+					sliderchanged = true;					
+				}
+			});
 		}
-		JButton randize = new JButton("Randomize");
+		randomize = new JButton("Randomize");
 		Random r = new Random(20);
-		randize.addActionListener(new ActionListener() {
+		randomize.addActionListener(new ActionListener() {
 			
 			public void actionPerformed(ActionEvent e) {
 				for(JSlider s : sliders) {
@@ -220,11 +244,11 @@ public class Window extends JFrame implements ActionListener {
 				
 			}
 		});
-		JPanel sliderPanel = new JPanel(new GridLayout(4,20));
+		sliderPanel = new JPanel(new GridLayout(4,20));
 		for(JSlider s : sliders) {
 			sliderPanel.add(s);
 		}
-		panel.add(randize);
+		panel.add(randomize);
 		add(sliderPanel,BorderLayout.EAST);
 
 		setVisible(true);
@@ -271,10 +295,10 @@ public class Window extends JFrame implements ActionListener {
 			case "Update lambda":
 				JPanel panel2 = new JPanel(new GridLayout(1, 2));
 				panel2.add(new JLabel("Learning rate (lambda"));
-				JTextField l = new JTextField(main.nn.lambda+"");
+				JTextField l = new JTextField(main.nn.getLearningRate()+"");
 				panel2.add(l);
 				int result2 = JOptionPane.showConfirmDialog(this, panel2, "Update Learning Rate", JOptionPane.OK_CANCEL_OPTION);
-				if(result2 == JOptionPane.OK_OPTION) main.nn.lambda = Double.parseDouble(l.getText());
+				if(result2 == JOptionPane.OK_OPTION) main.nn.setLearningRate(Double.parseDouble(l.getText()));
 				break;
 			case "Start training":
 				main.training = true;
@@ -341,21 +365,28 @@ public class Window extends JFrame implements ActionListener {
 		}
 	}
 	double[][] encodedImages;
-	double[][] covariance;
+	MatrixNd eigenvectors;
+	
 	public void encode() {
 		if(encodedImages == null) encodedImages = main.encodeImages();
-		int[][] distribution;
-		distribution = new int[80][20];
-		for(int j = 0; j < encodedImages[0].length; j++) {
-			for(int i = 0; i < encodedImages.length; i++) {
-				double value = encodedImages[i][j];
-				distribution[j][(int)((value+1)*10)]++;				
-			}
+		VecNd[] data = new VecNd[encodedImages.length];
+		for(int i = 0; i < data.length; i++) {
+			data[i] = new VecNd(encodedImages[i]);
 		}
+		eigenvectors = PCA.pca(data);
+//		System.out.println(Arrays.toString(eigenvectors[0]));
+//		int[][] distribution;
+//		distribution = new int[80][20];
+//		for(int j = 0; j < encodedImages[0].length; j++) {
+//			for(int i = 0; i < encodedImages.length; i++) {
+//				double value = encodedImages[i][j];
+//				distribution[j][(int)((value+1)*10)]++;				
+//			}
+//		}
 //		for(int k = 0; k < distribution.length; k++) {
-		for(int l = 0; l < distribution[6].length; l++) {
-			System.out.print(distribution[6][l]+"\t");				
-		}
+//		for(int l = 0; l < distribution[6].length; l++) {
+//			System.out.print(distribution[6][l]+"\t");				
+//		}
 //			System.out.println();
 //		}
 			
@@ -374,27 +405,27 @@ public class Window extends JFrame implements ActionListener {
 //			double sd = Math.sqrt(sum);
 //			System.out.println("Distribution "+ n+": sd: " + sd+ ", var: " + sum + ", mean: " + mean);
 //		}
-		covariance = new double[main.numOfFeatures][main.numOfFeatures];
-		double[] mean = new double[main.numOfFeatures];
-		double m = 0;
-		for(int x = 0; x < main.numOfFeatures; x++) {
-			for(int i = 0; i < encodedImages.length; i++) {
-				m += encodedImages[i][x];
-			}
-			m /= (double)encodedImages.length;
-			mean[x] = m;
-		}
-		
-		for(int j = 0; j < covariance.length; j++) {
-			for(int k = 0; k < covariance[j].length; k++) {
-				double sum = 0;
-				for(int i = 0; i < encodedImages.length; i++) {
-					sum = (encodedImages[i][j]-mean[j])*(encodedImages[i][k]-mean[k]);
-				}
-				sum /= encodedImages.length-1;
-				covariance[j][k] = sum;
-			}
-		}
+//		covariance = new double[main.numOfFeatures][main.numOfFeatures];
+//		double[] mean = new double[main.numOfFeatures];
+//		double m = 0;
+//		for(int x = 0; x < main.numOfFeatures; x++) {
+//			for(int i = 0; i < encodedImages.length; i++) {
+//				m += encodedImages[i][x];
+//			}
+//			m /= (double)encodedImages.length;
+//			mean[x] = m;
+//		}
+//		
+//		for(int j = 0; j < covariance.length; j++) {
+//			for(int k = 0; k < covariance[j].length; k++) {
+//				double sum = 0;
+//				for(int i = 0; i < encodedImages.length; i++) {
+//					sum = (encodedImages[i][j]-mean[j])*(encodedImages[i][k]-mean[k]);
+//				}
+//				sum /= encodedImages.length-1;
+//				covariance[j][k] = sum;
+//			}
+//		}
 		
 //		for(int j = 0; j < covariance.length; j++) {
 //			System.out.print("{{");

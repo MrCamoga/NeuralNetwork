@@ -23,7 +23,7 @@ public class NeuralNetwork implements Cloneable {
 	public ActivationFunctions[] f;
 	public CostFunctions COSTFUNCTION = CostFunctions.QUADRATIC;
 
-	public static double lambda = 0.1;
+	private double lambda = 0.1;
 	
 	//TODO remove checking
 	public int correct = 0;
@@ -69,7 +69,7 @@ public class NeuralNetwork implements Cloneable {
 		for(int n = 0; n < layers-1; n++) {
 			activations[n] = bis.read();
 		}
-		setActivations(activations);	
+		setActivations(activations);
 		for(int n = 0; n < w.length; n++) {
 			for(int k = 0; k < w[n].length; k++) {
 				for(int j = 0; j < w[n][k].length; j++) {
@@ -91,7 +91,7 @@ public class NeuralNetwork implements Cloneable {
 	}
 
 	public void randomInit() {
-		Random r = new Random();
+		Random r = new Random(30);
 		for(int n = 0; n < w.length; n++) {
 			for (int i = 0; i < w[n].length; i++)
 				for (int j = 0; j < w[n][i].length; j++) {
@@ -115,7 +115,6 @@ public class NeuralNetwork implements Cloneable {
 		for(int j = 0; j < b.length; j++) {
 			b[j] = new double[l[j+1]];
 		}
-//		Arrays.stream(l).forEach(i -> System.out.print(i+"×"));
 	}
 
 	/**
@@ -156,10 +155,11 @@ public class NeuralNetwork implements Cloneable {
 		
 		checkOutput(target);
 
+		//XXX decomment gradient descent
 		gradientDescent(dJdw, dJdb);
 		
 		System.out.println("\nJ = " + cost);
-//		costOverTime.add(cost);
+		costOverTime.add(cost);
 		return mulMatrix(w[0], dJdz);
 	}
 	
@@ -194,7 +194,6 @@ public class NeuralNetwork implements Cloneable {
 			}
 			
 			dJda1[i] = add(dJda1[i], mulMatrix(w[0], dJdz));
-//			System.out.println(dJda1[i][0]);
 			cost += computeCost(a[a.length-1], target[i]);
 			
 			checkOutput(target[i]);
@@ -202,12 +201,9 @@ public class NeuralNetwork implements Cloneable {
 		
 		
 		gradientDescent(dJdw, dJdb);
-//		System.out.println("\ncost derivative:");
-//		Arrays.stream(dJdy).forEach(i -> System.out.println(i));
 		System.out.println("\nJ = " + cost);
 		if(cost > maxCost) maxCost = cost;
 		costOverTime.add(cost);
-//		System.err.println("Updating weights...");
 		
 		return dJda1;
 	}
@@ -252,8 +248,7 @@ public class NeuralNetwork implements Cloneable {
 		for(int n = 0; n < w.length; n++) {
 			for (int i = 0; i < w[n].length; i++) {
 				for (int j = 0; j < w[n][i].length; j++) {
-					w[n][i][j] -= lambda * dJdw[n][j][i]; // TODO rotate matrix						
-					
+					w[n][i][j] -= lambda * dJdw[n][j][i];				
 				}
 			}
 			for(int i = 0; i < b[n].length; i++) {
@@ -278,7 +273,7 @@ public class NeuralNetwork implements Cloneable {
 					break;
 			}
 		}
-		return result/(double)output.length;
+		return result;
 	}
 	
 	public double[] costPrime(double[] target) {
@@ -320,8 +315,6 @@ public class NeuralNetwork implements Cloneable {
 	}
 
 	public double[] mulMatrix(double[][] a, double[] z) {
-//		System.out.println(a.length+"x"+a[0].length);
-//		System.out.println(z.length);
 		double[] result = new double[a[0].length];
 		for (int i = 0; i < z.length; i++) {
 			for (int j = 0; j < a[0].length; j++) {
@@ -400,6 +393,16 @@ public class NeuralNetwork implements Cloneable {
 			for (int i = 0; i < layer.length; i++) {
 				output[i] = Math.max(0, layer[i]);				
 			}
+			break;
+		case SOFTMAX:
+			double sum = 0;
+			for (int i = 0; i < layer.length; i++) {
+				output[i] = Math.exp(layer[i]);
+				sum += output[i];
+			}
+			for (int i = 0; i < layer.length; i++) {
+				output[i] /= sum;
+			}
 		}
 		return output;
 	}
@@ -420,6 +423,9 @@ public class NeuralNetwork implements Cloneable {
 			for(int i = 0; i < layer.length; i++) {
 				result[i] = layer[i] > 0 ? 1:0;
 			}
+			break;
+		case SOFTMAX:
+			
 		}
 		return result;
 	}
@@ -439,16 +445,21 @@ public class NeuralNetwork implements Cloneable {
 		int x, y;
 		int xlast = 0, ylast = 0;
 		g.setColor(new Color(color));
-		int maxpoints = 200;
+		int maxpoints = 2000;
 		int start = (int)Math.max(0, costOverTime.size()-maxpoints);
 		double maxCost = 0;
 		double minCost = Double.MAX_VALUE;
 		int size = (int)Math.min(costOverTime.size(), maxpoints);
 		for(int i = 0; i < size; i+=1) {
 			int index = i + start;
-			x = (int) (xo + width*i/size);
+			
 			if(maxCost < costOverTime.get(index)) maxCost = costOverTime.get(index);
 			if(minCost > costOverTime.get(index)) minCost = costOverTime.get(index);
+		}
+		for(int i = 0; i < size; i+=1) {
+			int index = i + start;
+			x = (int) (xo + width*i/size);
+			
 			y = (int) (yo + height*(1-costOverTime.get(index)/(maxCost)));
 			
 			if(i > 0) g.drawLine(xlast, ylast, x, y);
@@ -469,10 +480,9 @@ public class NeuralNetwork implements Cloneable {
 		
 		for(int m = 0; m <= costOverTime.size()/num; m++) {
 			int xm = (int) (xo+m*num/(double)costOverTime.size()*width);
-//			System.out.println(costOverTime.size());
-//			System.out.println(xm);
 			g.drawLine(xm, yo+height-10, xm, yo+height+10);
 			g.drawString(start+m*num+"", xm, yo+height+20);
+//			System.out.println(costOverTime.size());
 		}
 		
 		//Current
@@ -527,11 +537,21 @@ public class NeuralNetwork implements Cloneable {
 						xspacing*n+xo+(diameter-fontm.stringWidth(o))/2, 
 						yo+y+(diameter-fontm.getHeight())/2+fontm.getAscent());
 			}
+			g.setColor(Color.BLACK);
+			g.drawString(a[n].length+"", xspacing*n+xo, yo+24+yoa[n]+maxneurons*(diameter+yspacing));
 		}
 		for(int n = 0; n < b.length; n++) {
 			g.setColor(Color.white);
 			g.fillOval(xspacing*n+xo, yo+height-yoa[n], diameter, diameter);
 		}
+	}
+	
+	public void setLearningRate(double r) {
+		lambda = r;
+	}
+	
+	public double getLearningRate() {
+		return lambda;
 	}
 	
 	/**
@@ -568,7 +588,6 @@ public class NeuralNetwork implements Cloneable {
 						byte[] bytes = new byte[8];
 						ByteBuffer.wrap(bytes).putDouble(w[i][j][k]);
 						bos.write(bytes);
-//						System.err.println(Arrays.toString(bytes));
 					}
 				}
 			}
