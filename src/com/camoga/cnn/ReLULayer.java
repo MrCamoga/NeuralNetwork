@@ -1,5 +1,7 @@
 package com.camoga.cnn;
 
+import java.awt.Graphics;
+
 public class ReLULayer implements ICLayer {
 
 	private double[][][] relu;
@@ -44,5 +46,9 @@ public class ReLULayer implements ICLayer {
 
 	public int size() {
 		return relu[0].length;
+	}
+
+	public int render(Graphics g, int x) {
+		return 120;
 	}
 }

@@ -274,14 +274,14 @@ public class FullyConnectedLayer {
 		for(int i = 0; i < w.length; i++) {
 			for(int m = 0; m < w[i].length; m++) {
 				for(int n = 0; n < w[i][m].length; n++) {
-					w[i][m][n] -= 0.0001*djdw[i][m][n];
+					w[i][m][n] -= ConvNet.learningrate*djdw[i][m][n];
 					djdw[i][m][n] = 0;
 				}
 			}
 		}
 		for(int i = 0; i < b.length; i++) {
 			for(int m = 0; m < b[i].length; m++) {
-				b[i][m] -= 0.0001*djdb[i][m];
+				b[i][m] -= ConvNet.learningrate*djdb[i][m];
 				djdb[i][m] = 0;
 			}
 		}

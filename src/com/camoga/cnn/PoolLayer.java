@@ -1,5 +1,7 @@
 package com.camoga.cnn;
 
+import java.awt.Graphics;
+
 public class PoolLayer implements ICLayer {
 
 	private double[][][] sample;
@@ -66,5 +68,9 @@ public class PoolLayer implements ICLayer {
 
 	public int size() {
 		return sample[0].length;
+	}
+
+	public int render(Graphics g, int x) {
+		return 120;
 	}
 }

@@ -1,10 +1,10 @@
 package com.camoga.cnn;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Random;
 
 import javax.imageio.ImageIO;
@@ -13,40 +13,41 @@ public class ConvNet {
 	
 	static ArrayList<ICLayer> cnnlayers = new ArrayList<>();
 	FullyConnectedLayer fc;
+	static double learningrate = 0.01;
 	
 	public ConvNet() {
 		loadImages();
-		cnnlayers.add(new InputLayer(1,100));
-		cnnlayers.add(new ConvLayer((ICLayer)cnnlayers.get(0), 10, 5, "same", 1));
+		cnnlayers.add(new InputLayer(3,100));
+		cnnlayers.add(new ConvLayer(cnnlayers.get(0), 10, 5, "same", 1));
 		cnnlayers.add(new ReLULayer(cnnlayers.get(1)));
 		cnnlayers.add(new PoolLayer(cnnlayers.get(2)));
 
-		cnnlayers.add(new ConvLayer((ICLayer)cnnlayers.get(3), 10, 5, "same", 1));
+		cnnlayers.add(new ConvLayer((ICLayer)cnnlayers.get(3), 5, 5, "same", 1));
 		cnnlayers.add(new ReLULayer(cnnlayers.get(4)));
 		cnnlayers.add(new PoolLayer(cnnlayers.get(5)));
 
-		cnnlayers.add(new ConvLayer((ICLayer)cnnlayers.get(6), 10, 5, "same", 1));
+		cnnlayers.add(new ConvLayer((ICLayer)cnnlayers.get(6), 5, 5, "same", 1));
 		cnnlayers.add(new ReLULayer(cnnlayers.get(7)));
 		cnnlayers.add(new PoolLayer(cnnlayers.get(8)));
 
-		cnnlayers.add(new ConvLayer((ICLayer)cnnlayers.get(9), 20, 5, "same", 1));
+		cnnlayers.add(new ConvLayer((ICLayer)cnnlayers.get(9), 5, 5, "same", 1));
 		cnnlayers.add(new ReLULayer(cnnlayers.get(10)));
 		cnnlayers.add(new PoolLayer(cnnlayers.get(11)));
 		
 		ICLayer last = cnnlayers.get(cnnlayers.size()-1);
+		System.out.println(((ConvLayer)(cnnlayers.get(1))).kernel.length);
 		
-		fc = new  FullyConnectedLayer(
-				last.depth()*last.size()*last.size(),
-				15,2);
+		fc = new  FullyConnectedLayer(last.depth()*last.size()*last.size(),	15,2);
 //		layers.add(new PoolLayer(layers.get(1)));
 //		layers.add(new ConvLayer(layers.get(0), 5, 3, 1, 1));
 //		layers.add(new PoolLayer(layers.get(1)));
 		
 		new Window();
 		Random r = new Random();
+		int batchsize = 8;
 		while(true) {
 			int correct = 0;
-			for(int batch = 0; batch < 3; batch++) {				
+			for(int batch = 0; batch < batchsize; batch++) {				
 				int rand = r.nextInt(IMAGES.length);
 				double[][][] input = IMAGES[rand];
 				for(int i = 0; i < cnnlayers.size(); i++) {
@@ -67,7 +68,7 @@ public class ConvNet {
 					dj = cnnlayers.get(i).backprop(cnnlayers.get(i-1), dj);
 				}
 			}
-			System.out.println("Correct: " + correct*100/3 + "%");
+			System.out.println("Correct: " + correct*100/batchsize + "%");
 			gradientDescent();
 			
 //			System.out.println(Arrays.deepToString(djdk).replace("],", "],\n"));
@@ -87,7 +88,7 @@ public class ConvNet {
 				for(int n = 0; n < djdk[0].length; n++) {
 					for(int y = 0; y < djdk[0][0].length; y++) {
 						for(int x = 0; x < djdk[0][0][0].length; x++) {
-							layer.kernel[m][n][y][x] -= 0.0001*djdk[m][n][y][x];
+							layer.kernel[m][n][y][x] -= ConvNet.learningrate*djdk[m][n][y][x];
 						}
 					}
 				}
@@ -98,14 +99,14 @@ public class ConvNet {
 		fc.gradientDescent();
 	}
 
-	double[][][][] IMAGES;
+	static double[][][][] IMAGES;
 	double[][] TARGETS;
 	
 	public void loadImages() {
 		IMAGES = new double[100][3][100][100];
-		for(int i = 0; i < 50; i++) {
+		for(int i = 0; i < IMAGES.length/2; i++) {
 			try {
-				BufferedImage cat = ImageIO.read(getClass().getResourceAsStream("/CNN/catdog/PetImages/Cat/"+i+".png"));
+				BufferedImage cat = ImageIO.read(new File("C:\\Users\\usuario\\workspace\\NEURALNET\\res\\catdog/PetImages/Cat/"+i+".png"));
 				for(int y = 0; y < cat.getHeight(); y++) {
 					for(int x = 0; x < cat.getWidth(); x++) {
 						int rgb = cat.getRGB(x, y);
@@ -114,7 +115,7 @@ public class ConvNet {
 						IMAGES[2*i][2][y][x] = (rgb&0xff)/255.0f;
 					}
 				}
-				BufferedImage dog = ImageIO.read(getClass().getResourceAsStream("/CNN/catdog/PetImages/Dog/"+i+".png"));
+				BufferedImage dog = ImageIO.read(new File("C:\\Users\\usuario\\workspace\\NEURALNET\\res\\catdog/PetImages/Dog/"+i+".png"));
 				for(int y = 0; y < dog.getHeight(); y++) {
 					for(int x = 0; x < dog.getWidth(); x++) {
 						int rgb = dog.getRGB(x, y);

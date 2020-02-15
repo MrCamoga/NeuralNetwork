@@ -8,5 +8,4 @@ public interface INLayer {
 	public double[] output();
 	
 	public int size();
-	
 }

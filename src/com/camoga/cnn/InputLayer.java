@@ -1,6 +1,6 @@
 package com.camoga.cnn;
 
-import java.util.Arrays;
+import java.awt.Graphics;
 
 public class InputLayer implements ICLayer {
 
@@ -29,5 +29,14 @@ public class InputLayer implements ICLayer {
 
 	public double[][][] output() {
 		return input;
+	}
+
+	public int render(Graphics g, int x) {
+		for(int i = 0; i < depth(); i++) {
+			g.drawImage(Window.createImage(input[i]), x, i*120, null);
+		}
+		
+		g.drawImage(Window.createImage(input), x, 360, null);
+		return 120;
 	}
 }

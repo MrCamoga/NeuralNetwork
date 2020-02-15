@@ -1,5 +1,6 @@
 package com.camoga.cnn;
 
+import java.awt.Graphics;
 import java.util.Random;
 
 public class ConvLayer implements ICLayer {
@@ -53,17 +54,16 @@ public class ConvLayer implements ICLayer {
 	
 	public double[][][] forward(double[][][] input) {
 		conv = new double[depth()][size()][size()];
-		int kernelSize = (kernelsize-1)/2;
 		for(int m = 0; m < kernel.length; m++) {
 			for(int n = 0; n < kernel[m].length; n++) {
 				for(int y = offset, yo = 0; y < size()+offset; y+=stride, yo++) {
 					for(int x = offset, xo = 0; x < size()+offset; x+=stride, xo++) {
-						for(int ky = 0; ky < kernelsize; ky++) {
-							int yi = y + ky - kernelSize;
+						int yi = y - padding;
+						for(int ky = 0; ky < kernelsize; ky++,yi++) {
 							if(yi < 0) continue;
 							if(yi >= input[0].length) continue;
-							for(int kx = 0; kx < kernelsize; kx++) {
-								int xi = x + kx-kernelSize;
+							int xi = x - padding;
+							for(int kx = 0; kx < kernelsize; kx++,xi++) {
 								if(xi < 0) continue;
 								if(xi >= input[0].length) continue;
 								conv[n][yo][xo] += input[m][yi][xi]*kernel[m][n][ky][kx];
@@ -97,21 +97,18 @@ public class ConvLayer implements ICLayer {
 		return conv[0].length;
 	}
 
-	
+	//TODO STRIDE
 	public double[][][] backprop(ICLayer prev, double[][][] cost) {
-		int kernelSize = kernelsize/2;
-//		djdk = new double[kernel.length][depth()][kernelsize][kernelsize];
-//		djdi = new double[kernel.length][inputsize][inputsize];
 		for(int m = 0; m < kernel.length; m++) {
 			for(int n = 0; n < kernel[0].length; n++) {
 				for(int y = 0; y < kernelsize; y++) {
 					for(int x = 0; x < kernelsize; x++) {
-						for(int oy = 0; oy < cost[0].length; oy++) {
-							int yi = y+oy-padding;
+						int yi = y-padding;
+						for(int oy = 0; oy < cost[0].length; yi++, oy++) {
 							if(yi < 0) continue;
 							if(yi >= inputsize) break;
-							for(int ox = 0; ox < cost[0].length; ox++) {
-								int xi = x+ox-padding;
+							int xi = x-padding;
+							for(int ox = 0; ox < cost[0].length; ox++,xi++) {
 								if(xi < 0) continue;
 								if(xi >= inputsize) break;
 								djdk[m][n][y][x] += prev.output()[m][yi][xi]*cost[n][oy][ox];
@@ -125,15 +122,15 @@ public class ConvLayer implements ICLayer {
 			for(int n = 0; n < kernel[0].length; n++) {
 				for(int y = 0; y < djdi[0].length; y++) {
 					for(int x = 0; x < djdi[0].length; x++) {
-						for(int ky = 0; ky < kernelsize; ky++) {
-							int yo = y - offset + ky - kernelSize;
+						for(int ky = kernelsize-1; ky >= 0; ky--) {
+							int yo = y - offset - ky - 1;
 							if(yo < 0) continue;
 							if(yo >= size()) break;
-							for(int kx = 0; kx < kernelsize; kx++) {
-								int xo = x - offset + kx - kernelSize;
+							for(int kx = kernelsize-1; kx >= 0; kx--) {
+								int xo = x - offset + kx - 1;
 								if(xo < 0) continue;
 								if(xo >= size()) break;
-								djdi[m][y][x] += cost[n][yo][xo]*kernel[m][n][kernelsize-ky-1][kernelsize-kx-1];	
+								djdi[m][y][x] += cost[n][yo][xo]*kernel[m][n][ky][kx];	
 							}
 						}
 					}
@@ -172,5 +169,18 @@ public class ConvLayer implements ICLayer {
 
 	public double[][][] output() {
 		return conv;
+	}
+
+	public int render(Graphics g, int x) {
+		for(int i = 0; i < kernel.length; i++) {
+			for(int j = 0; j < kernel[i].length; j++) {
+				g.drawImage(Window.createImage(kernel[i][j]), x+j*(kernelsize+2)*4, i*(kernelsize+2)*4,4*kernelsize,4*kernelsize, null);
+			}
+		}
+		x+= kernel.length*4*(kernelsize+2)+20;
+		for(int i = 0; i < conv.length; i++) {
+//			g.drawImage(Window.createImage(conv[i]), x, , null)
+		}
+		return 120;
 	}
 }
